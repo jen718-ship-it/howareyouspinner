@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How are you? I'm ...</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@600;700;800&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #a8edf0 0%, #fed6e3 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        .game-title {
+            font-family: 'Fredoka One', cursive;
+            letter-spacing: 2px;
+            text-shadow: 4px 4px 0px rgba(0,0,0,0.12);
+        }
+
+        /* Center Hub Interactive Button Styling */
+        .center-hub-btn {
+            font-family: 'Fredoka One', cursive;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 0px #15803d, 0 10px 15px rgba(0,0,0,0.25);
+            background: radial-gradient(circle at 30% 30%, #4ade80, #16a34a);
+            border: 5px solid #ffffff;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .center-hub-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 0px #15803d, 0 12px 20px rgba(0,0,0,0.3);
+        }
+
+        .center-hub-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 0px #15803d, 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Stopping state for Center Button */
+        .center-hub-btn.stopping {
+            background: radial-gradient(circle at 30% 30%, #f87171, #dc2626);
+            box-shadow: 0 6px 0px #991b1b, 0 10px 15px rgba(0,0,0,0.25);
+        }
+
+        .center-hub-btn.stopping:hover {
+            box-shadow: 0 8px 0px #991b1b, 0 12px 20px rgba(0,0,0,0.3);
+        }
+
+        .center-hub-btn.stopping:active {
+            box-shadow: 0 2px 0px #991b1b, 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Wheel Pointer styling */
+        .pointer {
+            filter: drop-shadow(0px 6px 4px rgba(0,0,0,0.25));
+        }
+
+        /* Canvas container drop shadow */
+        .wheel-container {
+            filter: drop-shadow(0px 15px 25px rgba(0,0,0,0.15));
+        }
+
+        .progress-card {
+            background-color: #f8fafc;
+            border: 5px solid #ffcc00;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Star glow and scale animations */
+        @keyframes starGlow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px #f59e0b); }
+            50% { transform: scale(1.25); filter: drop-shadow(0 0 14px #fbbf24); }
+        }
+
+        .star-active {
+            animation: starGlow 1.4s infinite ease-in-out;
+            color: #fbbf24 !important;
+        }
+
+        .star-inactive {
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body class="p-4 flex flex-col items-center justify-between min-h-screen w-full">
+
+    <div class="flex flex-col items-center justify-center w-full max-w-4xl my-auto text-center">
+        
+        <!-- Title ONLY -->
+        <h1 class="game-title text-4xl sm:text-5xl md:text-6xl text-amber-500 mb-6 sm:mb-8 select-none">
+            How are you? I'm ...
+        </h1>
+
+        <!-- Main Content Area: Wheel & Unified Vertical Star-Progress Bar Side-by-Side -->
+        <div class="flex flex-col md:flex-row items-center justify-center gap-6 sm:gap-12 w-full mb-4">
+            
+            <!-- Wheel Canvas Container with Center Button -->
+            <div class="relative wheel-container flex items-center justify-center">
+                
+                <!-- Top Pointer -->
+                <div class="absolute -top-6 z-20 pointer flex flex-col items-center">
+                    <svg width="50" height="60" viewBox="0 0 50 60">
+                        <polygon points="25,60 5,10 45,10" fill="#ff2e63" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+                        <circle cx="25" cy="15" r="8" fill="#ffd15c" />
+                    </svg>
+                </div>
+
+                <!-- Canvas Element -->
+                <canvas id="wheelCanvas" width="380" height="380" class="w-[300px] h-[300px] sm:w-[380px] sm:h-[380px] rounded-full"></canvas>
+                
+                <!-- Interactive Center Cap / Toggle Button -->
+                <button id="toggleBtn" class="center-hub-btn absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full z-10 flex flex-col items-center justify-center text-white text-xl sm:text-2xl font-bold tracking-wider leading-tight">
+                    <span>START</span>
+                </button>
+            </div>
+
+            <!-- Unified Vertical Star & Progress Bar Card -->
+            <div class="progress-card rounded-[38px] p-5 w-44 h-[380px] sm:h-[420px] flex flex-col items-center justify-between select-none">
+                
+                <!-- Unified Vertical Container for Stars + Bar -->
+                <div class="relative w-full flex-1 my-2 flex flex-col items-center justify-between">
+                    
+                    <!-- Background Pill Track -->
+                    <div class="absolute inset-x-0 mx-auto w-10 h-full bg-slate-200/90 rounded-full overflow-hidden p-1 shadow-inner z-0 flex flex-col justify-end">
+                        <!-- Rising Animated Yellow Color Fill -->
+                        <div id="progressBarFill" class="w-full bg-gradient-to-t from-amber-400 to-amber-300 rounded-full transition-all duration-700 ease-out flex justify-center items-start pt-1" style="height: 0%;">
+                            <div class="w-6 h-6 bg-amber-400 rounded-full shadow-sm"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stars overlayed in the same vertical layout -->
+                    <div id="starsOverlay" class="relative z-10 w-full h-full flex flex-col justify-between items-center py-1">
+                        <!-- 5 Stars inserted dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Footer Text Label matching user image -->
+                <div id="progressText" class="text-lg font-extrabold text-slate-700 tracking-wide mt-2">
+                    0 / 8 Spins
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const starsOverlay = document.getElementById('starsOverlay');
+        const progressBarFill = document.getElementById('progressBarFill');
+        const progressText = document.getElementById('progressText');
+        const jsConfetti = new JSConfetti();
+
+        const TOTAL_SPINS_REQUIRED = 8;
+        const TOTAL_STARS = 5;
+        let spinCount = 0;
+
+        const items = [
+            { name: "fine", src: "fine.png", color: "#FF6B6B", fallbackLabel: "FINE" },
+            { name: "good", src: "good.png", color: "#4ECDC4", fallbackLabel: "GOOD" },
+            { name: "Great", src: "Great.png", color: "#FFE66D", fallbackLabel: "GREAT" }
+        ];
+
+        items.forEach(item => {
+            const img = new Image();
+            img.src = item.src;
+            img.onload = () => {
+                item.img = img;
+                item.loaded = true;
+                drawWheel();
+            };
+            img.onerror = () => {
+                item.loaded = false;
+                drawWheel();
+            };
+        });
+
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playClickSound() {
+            if (!audioCtx) return;
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.03);
+
+                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.03);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.03);
+            } catch (e) {}
+        }
+
+        function playWinSound() {
+            if (!audioCtx) return;
+            try {
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.09);
+
+                    gain.gain.setValueAtTime(0, audioCtx.currentTime + idx * 0.09);
+                    gain.gain.linearRampToValueAtTime(0.35, audioCtx.currentTime + idx * 0.09 + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.09 + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.start(audioCtx.currentTime + idx * 0.09);
+                    osc.stop(audioCtx.currentTime + idx * 0.09 + 0.35);
+                });
+            } catch (e) {}
+        }
+
+        function updateProgressUI() {
+            starsOverlay.innerHTML = '';
+
+            const activeStarCount = Math.min(TOTAL_STARS, Math.floor((spinCount / TOTAL_SPINS_REQUIRED) * TOTAL_STARS));
+
+            for (let i = TOTAL_STARS - 1; i >= 0; i--) {
+                const isEarned = i < activeStarCount;
+                const starDiv = document.createElement('div');
+                starDiv.className = `w-10 h-10 transition-all duration-500 flex items-center justify-center ${isEarned ? 'star-active' : 'star-inactive'}`;
+                
+                starDiv.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-full h-full drop-shadow-md">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                `;
+                starsOverlay.appendChild(starDiv);
+            }
+
+            const percentage = Math.min(100, (spinCount / TOTAL_SPINS_REQUIRED) * 100);
+            progressBarFill.style.height = `${percentage}%`;
+
+            progressText.innerText = `${spinCount} / ${TOTAL_SPINS_REQUIRED} Spins`;
+        }
+
+        let currentAngle = 0;
+        let spinSpeed = 0;
+        let isSpinning = false;
+        let isStopping = false;
+        let lastPassedSector = -1;
+        let animationFrameId = null;
+
+        const numSectors = items.length;
+        const sliceAngle = (2 * Math.PI) / numSectors;
+
+        function drawWheel() {
+            const width = canvas.width;
+            const height = canvas.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = width / 2 - 10;
+
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < numSectors; i++) {
+                const startAngle = currentAngle + i * sliceAngle;
+                const endAngle = startAngle + sliceAngle;
+
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+
+                ctx.fillStyle = items[i].color;
+                ctx.fill();
+
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + sliceAngle / 2);
+
+                const item = items[i];
+                const imgSize = radius * 0.45;
+                const imgRadiusPos = radius * 0.55;
+
+                if (item.loaded && item.img) {
+                    ctx.drawImage(
+                        item.img,
+                        imgRadiusPos - imgSize / 2,
+                        -imgSize / 2,
+                        imgSize,
+                        imgSize
+                    );
+                } else {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = 'bold 28px Quicksand, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(item.fallbackLabel, imgRadiusPos, 0);
+                }
+
+                ctx.restore();
+            }
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.lineWidth = 12;
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.stroke();
+
+            checkSectorTick();
+        }
+
+        function checkSectorTick() {
+            const topPointerAngle = 1.5 * Math.PI;
+            let normalizedAngle = (topPointerAngle - (currentAngle % (2 * Math.PI))) % (2 * Math.PI);
+            if (normalizedAngle < 0) normalizedAngle += 2 * Math.PI;
+
+            const currentSector = Math.floor(normalizedAngle / sliceAngle) % numSectors;
+
+            if (currentSector !== lastPassedSector) {
+                if (isSpinning) {
+                    playClickSound();
+                }
+                lastPassedSector = currentSector;
+            }
+        }
+
+        function updateAnimation() {
+            if (isSpinning) {
+                if (!isStopping) {
+                    spinSpeed = 0.35;
+                } else {
+                    spinSpeed *= 0.982;
+
+                    if (spinSpeed < 0.002) {
+                        spinSpeed = 0;
+                        isSpinning = false;
+                        isStopping = false;
+
+                        spinCount++;
+                        updateProgressUI();
+
+                        playWinSound();
+
+                        if (spinCount >= TOTAL_SPINS_REQUIRED) {
+                            jsConfetti.addConfetti({
+                                confettiRadius: 6,
+                                confettiNumber: 100,
+                            });
+                            toggleBtn.querySelector('span').innerText = "AGAIN";
+                        } else {
+                            toggleBtn.querySelector('span').innerText = "START";
+                        }
+
+                        toggleBtn.classList.remove('stopping');
+
+                        cancelAnimationFrame(animationFrameId);
+                        return;
+                    }
+                }
+
+                currentAngle += spinSpeed;
+                drawWheel();
+                animationFrameId = requestAnimationFrame(updateAnimation);
+            }
+        }
+
+        toggleBtn.addEventListener('click', () => {
+            initAudio();
+
+            if (spinCount >= TOTAL_SPINS_REQUIRED && !isSpinning) {
+                spinCount = 0;
+                updateProgressUI();
+            }
+
+            if (!isSpinning) {
+                isSpinning = true;
+                isStopping = false;
+                spinSpeed = 0.35;
+
+                toggleBtn.querySelector('span').innerText = "STOP";
+                toggleBtn.classList.add('stopping');
+
+                animationFrameId = requestAnimationFrame(updateAnimation);
+            } else if (!isStopping) {
+                isStopping = true;
+            }
+        });
+
+        // Initial render
+        updateProgressUI();
+        drawWheel();
+    </script>
+</body>
+</html>
